@@ -1,14 +1,22 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import SignaturePad from "./components/SignaturePad";
 import ReactSignatureCanvas from "react-signature-canvas";
 import { Button } from "./components/ui/button";
 import { Rnd } from "react-rnd";
 import { IoMdCloseCircle } from "react-icons/io";
+import { DropFilesZone } from "./components/DropFilesZone";
+import { SelectedFiles } from "./components/SelectedFiles";
 
 function App() {
+  const savedSignature = localStorage.getItem("signature");
+
   const [files, setFiles] = useState<File[]>([]);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
-  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [signatureData, setSignatureData] = useState<string | null>(
+    savedSignature
+  );
+  const [showSignature, setShowSignature] = useState<boolean>(false);
+
   const [rnd, setRnd] = useState({
     width: "250px",
     height: "150px",
@@ -20,16 +28,9 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const currentFiles = event.target.files;
-    if (currentFiles) {
-      setFiles(Array.from(currentFiles));
-      setCurrentFile(currentFiles[0]);
-    }
-  };
-
   const clearSignature = () => {
     signatureCanvasRef.current?.clear();
+    setSignatureData(null);
     localStorage.removeItem("signature");
   };
 
@@ -37,13 +38,7 @@ function App() {
     const data = signatureCanvasRef.current?.toDataURL();
     if (data) {
       localStorage.setItem("signature", data);
-    }
-  };
-
-  const onUseSignature = () => {
-    const savedSignature = localStorage.getItem("signature");
-    if (savedSignature) {
-      setSignatureData(savedSignature);
+      setSignatureData(data);
     }
   };
 
@@ -101,34 +96,34 @@ function App() {
     };
   };
 
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(acceptedFiles);
+    setCurrentFile(acceptedFiles[0]);
+  }, []);
+
   return (
-    <div className="p-10 flex w-screen h-screen bg-background">
-      <div className="flex flex-col items-center justify-center gap-4 w-4/12">
+    <div className="flex w-screen h-screen bg-background gap-10">
+      {/* PAD SIGNATURE */}
+      <div className="flex flex-col items-center justify-center gap-4 w-3/12 shadow-xl">
         <SignaturePad
           clearSignature={clearSignature}
           saveSignatureData={saveSignatureData}
           signatureCanvasRef={signatureCanvasRef}
           savedSignature={localStorage.getItem("signature")}
         />
-        <Button variant={"outline"} onClick={onUseSignature}>
-          Use Signature
-        </Button>
+        {signatureData && (
+          <Button variant={"outline"} onClick={() => setShowSignature(true)}>
+            Use Signature
+          </Button>
+        )}
       </div>
 
-      <div className="flex flex-col items-center justify-center gap-4 w-6/12">
-        {files.length === 0 && (
-          <div>
-            <h3 className="text-2xl font-bold">Upload Signature</h3>
-            <input
-              type="file"
-              multiple
-              accept="image/*,.pdf" // Accept images and PDFs
-              onChange={handleFileChange}
-            />
-          </div>
-        )}
+      {/* ZONE D'ENVOI DE FICHIERS */}
+      {files.length === 0 && <DropFilesZone onDrop={onDrop} />}
 
-        {currentFile && (
+      {/* FICHIER ACTUEL */}
+      {currentFile && (
+        <div className="flex flex-col items-center justify-center gap-4 w-6/12 border">
           <div className="flex flex-col items-center justify-center gap-4">
             <div className="relative">
               {currentFile.type === "application/pdf" ? (
@@ -147,7 +142,7 @@ function App() {
                   alt={currentFile.name}
                 />
               )}
-              {signatureData && (
+              {showSignature && signatureData && (
                 <Rnd
                   className="absolute"
                   size={{ width: rnd.width, height: rnd.height }}
@@ -171,13 +166,13 @@ function App() {
                 >
                   <IoMdCloseCircle
                     className="text-2xl cursor-pointer absolute -top-7 -right-2"
-                    onClick={() => setSignatureData(null)}
+                    onClick={() => setShowSignature(false)}
                   />
                   <img
                     draggable={false}
                     src={signatureData}
                     alt="Signature"
-                    className="border-2 border-dashed border-gray-500 user-select-none"
+                    className="border-2 border-dashed border-gray-500 user-select-none animate-blink"
                     style={{ width: "100%", height: "100%" }}
                   />
                 </Rnd>
@@ -187,36 +182,17 @@ function App() {
               Download File with Signature
             </Button>
           </div>
-        )}
-      </div>
-
-      {files.length > 0 && (
-        <div className="flex flex-col items-center justify-center gap-4 w-4/12">
-          <h3>Selected files</h3>
-          <ul className="flex flex-col gap-4">
-            {files.map((file, index) => (
-              <li
-                key={index}
-                onClick={() => setCurrentFile(file)}
-                className="shadow-lg cursor-pointer px-2 py-1 rounded-md transition-all hover:scale-105"
-              >
-                <div className="flex items-center gap-2">
-                  {file.type.startsWith("image/") && (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      className="w-16 h-16 object-cover"
-                    />
-                  )}
-                  <div>
-                    <p>{file.name}</p>
-                    <p>{(file.size / 1024).toFixed(2)} KB</p>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
+      )}
+
+      {/* LISTES DES FICHIERS SELECTIONNES */}
+      {files.length > 0 && (
+        <SelectedFiles
+          files={files}
+          setCurrentFile={setCurrentFile}
+          setFiles={setFiles}
+          setShowSignature={setShowSignature}
+        />
       )}
       {/* Hidden Canvas for generating the image with signature */}
       <canvas ref={canvasRef} style={{ display: "none" }} />

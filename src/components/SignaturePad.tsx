@@ -57,7 +57,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({
         }}
       />
       <div className="flex justify-center gap-2">
-        <Button variant={"outline"} onClick={clearSignature}>
+        <Button variant={"destructive"} onClick={clearSignature}>
           Clear Signature
         </Button>
         <Button variant={"default"} onClick={saveSignatureData}>
