@@ -45,15 +45,19 @@ function App() {
 
   function onUseSignature() {
     setFiles((prev) =>
-      prev.map((fileWithRnd) => ({
-        file: fileWithRnd.file,
-        rnd: {
-          width: "250px",
-          height: "150px",
-          x: 0,
-          y: 0,
-        },
-      }))
+      prev.map((fileWithRnd, index) =>
+        index === currentIndexFile
+          ? {
+              ...fileWithRnd,
+              rnd: {
+                width: "250px",
+                height: "150px",
+                x: 0,
+                y: 0,
+              },
+            }
+          : fileWithRnd
+      )
     );
   }
 
@@ -169,7 +173,7 @@ function App() {
               ) : (
                 <img
                   ref={imageRef}
-                  className="w-full h-full object-cover user-select-none"
+                  className="w-full max-h-[80vh] object-cover user-select-none border"
                   draggable={false}
                   src={URL.createObjectURL(currentFile.file)}
                   alt={currentFile.file.name}
