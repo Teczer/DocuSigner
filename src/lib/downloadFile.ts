@@ -3,7 +3,7 @@ import { PDFDocument } from "pdf-lib";
 async function handlePdfFile(
   currentFile: File,
   signatureData: string | null,
-  rnd: rndStates,
+  rnd: rndStates | null,
   embedRef: React.RefObject<HTMLEmbedElement>
 ) {
   const pdfBytes = await currentFile.arrayBuffer();
@@ -11,7 +11,7 @@ async function handlePdfFile(
   const pages = pdfDoc.getPages();
   const firstPage = pages[0];
 
-  if (signatureData && embedRef.current) {
+  if (signatureData && embedRef.current && rnd) {
     const signatureImg = await fetch(signatureData).then((res) =>
       res.arrayBuffer()
     );
@@ -46,7 +46,7 @@ async function handlePdfFile(
 async function handleImageFile(
   currentFile: File,
   signatureData: string | null,
-  rnd: rndStates,
+  rnd: rndStates | null,
   canvasRef: React.RefObject<HTMLCanvasElement>,
   imageRef: React.RefObject<HTMLImageElement>
 ) {
@@ -65,7 +65,7 @@ async function handleImageFile(
     canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
 
-    if (signatureData) {
+    if (signatureData && rnd) {
       const signatureImg = new Image();
       signatureImg.src = signatureData;
       signatureImg.onload = () => {
@@ -98,7 +98,7 @@ async function handleImageFile(
 export async function downloadFileWithSignature(
   currentFile: File,
   signatureData: string | null,
-  rnd: rndStates,
+  rnd: rndStates | null,
   embedRef: React.RefObject<HTMLEmbedElement>,
   canvasRef: React.RefObject<HTMLCanvasElement>,
   imageRef: React.RefObject<HTMLImageElement>

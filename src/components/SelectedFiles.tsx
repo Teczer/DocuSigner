@@ -1,19 +1,18 @@
 import React, { useRef } from "react";
 import { Button } from "./ui/button";
 import { IoMdAdd } from "react-icons/io";
+import { FileWithRnd } from "../App";
 
 interface SelectedFilesProps {
-  files: File[];
-  setCurrentFile: (file: File | null) => void;
-  setFiles: (files: File[]) => void;
-  setShowSignature: (show: boolean) => void;
+  files: FileWithRnd[];
+  setCurrentIndexFile: (index: number) => void;
+  setFiles: (files: FileWithRnd[]) => void;
 }
 
 export const SelectedFiles: React.FC<SelectedFilesProps> = ({
   files,
-  setCurrentFile,
+  setCurrentIndexFile,
   setFiles,
-  setShowSignature,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,28 +27,31 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
         {files.map((file, index) => (
           <li
             key={index}
-            onClick={() => setCurrentFile(file)}
+            onClick={() => setCurrentIndexFile(index)}
             className="w-full shadow-xl cursor-pointer px-8 py-2 rounded-md transition-all hover:scale-105"
           >
             <div className="flex items-center gap-4">
-              {file.type.startsWith("image/") && (
+              {file.file.type.startsWith("image/") && (
                 <img
-                  src={URL.createObjectURL(file)}
-                  alt={file.name}
+                  src={URL.createObjectURL(file.file)}
+                  alt={file.file.name}
                   className="size-16 rounded-sm object-cover"
                 />
               )}
               <div>
-                <p className="font-bold">{file.name}</p>
+                <p className="font-bold">{file.file.name}</p>
                 <p className="text-gray-500">
-                  {(file.size / 1024).toFixed(2)} KB
+                  {(file.file.size / 1024).toFixed(2)} KB
                 </p>
               </div>
             </div>
           </li>
         ))}
-        <li className="border shadow-2xl cursor-pointer px-4 py-2 rounded-md transition-all hover:scale-105">
-          <IoMdAdd onClick={handleAddFile} />
+        <li
+          className="border shadow-2xl cursor-pointer px-4 py-2 rounded-md transition-all hover:scale-105"
+          onClick={handleAddFile}
+        >
+          <IoMdAdd />
           <input
             ref={inputRef}
             type="file"
@@ -57,9 +59,13 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
               if (!e.target.files) return;
 
               const newFiles = Array.from(e.target.files);
+              const newFilesWithRnd = newFiles.map((file) => ({
+                file,
+                rnd: null,
+              }));
+
               if (newFiles.length > 0) {
-                setFiles([...files, ...newFiles]);
-                setCurrentFile(newFiles[0]);
+                setFiles([...files, ...newFilesWithRnd]);
               }
             }}
             multiple
@@ -72,8 +78,6 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
         variant={"destructive"}
         onClick={() => {
           setFiles([]);
-          setCurrentFile(null);
-          setShowSignature(false);
         }}
       >
         Clear Files

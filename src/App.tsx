@@ -8,58 +8,129 @@ import { DropFilesZone } from "./components/DropFilesZone";
 import { SelectedFiles } from "./components/SelectedFiles";
 import { downloadFileWithSignature } from "./lib/downloadFile";
 
+export interface FileWithRnd {
+  file: File;
+  rnd: rndStates | null;
+}
+
 function App() {
   const savedSignature = localStorage.getItem("signature");
 
-  const [files, setFiles] = useState<File[]>([]);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileWithRnd[]>([]);
+  const [currentIndexFile, setCurrentIndexFile] = useState<number>(0);
+  const currentFile = files[currentIndexFile];
+
   const [signatureData, setSignatureData] = useState<string | null>(
     savedSignature
   );
-  const [showSignature, setShowSignature] = useState<boolean>(false);
-
-  const [rnd, setRnd] = useState<rndStates>({
-    width: "250px",
-    height: "150px",
-    x: 0,
-    y: 0,
-  });
 
   const signatureCanvasRef = useRef<ReactSignatureCanvas | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const embedRef = useRef<HTMLEmbedElement | null>(null);
 
-  const clearSignature = () => {
+  function clearSignature() {
     signatureCanvasRef.current?.clear();
     setSignatureData(null);
     localStorage.removeItem("signature");
-  };
+  }
 
-  const saveSignatureData = () => {
+  function saveSignatureData() {
     const data = signatureCanvasRef.current?.toDataURL();
     if (data) {
       localStorage.setItem("signature", data);
       setSignatureData(data);
     }
-  };
+  }
 
-  const handleDownload = () => {
+  function onUseSignature() {
+    setFiles((prev) =>
+      prev.map((fileWithRnd) => ({
+        file: fileWithRnd.file,
+        rnd: {
+          width: "250px",
+          height: "150px",
+          x: 0,
+          y: 0,
+        },
+      }))
+    );
+  }
+
+  function updateFileRnd(newX: number, newY: number) {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.file === currentFile.file
+          ? {
+              ...file,
+              rnd: {
+                ...file.rnd,
+                x: newX,
+                y: newY,
+                width: file.rnd?.width || "0px",
+                height: file.rnd?.height || "0px",
+              },
+            }
+          : file
+      )
+    );
+  }
+
+  function updateFileRndSize(
+    newWidth: number,
+    newHeight: number,
+    position: { x: number; y: number }
+  ) {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.file === currentFile.file
+          ? {
+              ...file,
+              rnd: {
+                ...file.rnd,
+                width: `${newWidth}px`,
+                height: `${newHeight}px`,
+                x: position.x,
+                y: position.y,
+              },
+            }
+          : file
+      )
+    );
+  }
+
+  function clearCurrentFileRnd() {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.file === currentFile.file
+          ? {
+              ...file,
+              rnd: null,
+            }
+          : file
+      )
+    );
+  }
+
+  function onUniqueFileDownload() {
     if (!currentFile) return;
 
     downloadFileWithSignature(
-      currentFile,
+      currentFile.file,
       signatureData,
-      rnd,
+      currentFile.rnd,
       embedRef,
       canvasRef,
       imageRef
     );
-  };
+  }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(acceptedFiles);
-    setCurrentFile(acceptedFiles[0]);
+    const filesWithRnd = acceptedFiles.map((file) => ({
+      file,
+      rnd: null,
+    }));
+    setFiles(filesWithRnd);
   }, []);
 
   return (
@@ -73,7 +144,7 @@ function App() {
           savedSignature={localStorage.getItem("signature")}
         />
         {signatureData && (
-          <Button variant={"outline"} onClick={() => setShowSignature(true)}>
+          <Button variant={"outline"} onClick={onUseSignature}>
             Use Signature
           </Button>
         )}
@@ -87,12 +158,12 @@ function App() {
         <div className="flex flex-col items-center justify-center gap-4 w-6/12">
           <div className="flex flex-col items-center justify-center gap-4">
             <div className="relative">
-              {currentFile.type === "application/pdf" ? (
+              {currentFile.file.type === "application/pdf" ? (
                 <embed
                   width={600}
                   height={600}
                   ref={embedRef}
-                  src={URL.createObjectURL(currentFile)}
+                  src={URL.createObjectURL(currentFile.file)}
                   type="application/pdf"
                 />
               ) : (
@@ -100,35 +171,33 @@ function App() {
                   ref={imageRef}
                   className="w-full h-full object-cover user-select-none"
                   draggable={false}
-                  src={URL.createObjectURL(currentFile)}
-                  alt={currentFile.name}
+                  src={URL.createObjectURL(currentFile.file)}
+                  alt={currentFile.file.name}
                 />
               )}
-              {showSignature && signatureData && (
+              {currentFile.rnd && signatureData && (
                 <Rnd
                   className="absolute"
-                  size={{ width: rnd.width, height: rnd.height }}
-                  position={{ x: rnd.x, y: rnd.y }}
+                  size={{
+                    width: currentFile.rnd.width,
+                    height: currentFile.rnd.height,
+                  }}
+                  position={{ x: currentFile.rnd.x, y: currentFile.rnd.y }}
                   onDragStop={(e, d) => {
                     const newX = Math.max(0, d.x);
                     const newY = Math.max(0, d.y);
-                    setRnd({ ...rnd, x: newX, y: newY });
+                    updateFileRnd(newX, newY);
                   }}
                   onResizeStop={(e, direction, ref, delta, position) => {
                     const newWidth = parseInt(ref.style.width);
                     const newHeight = parseInt(ref.style.height);
-                    setRnd({
-                      width: `${newWidth}px`,
-                      height: `${newHeight}px`,
-                      x: position.x,
-                      y: position.y,
-                    });
+                    updateFileRndSize(newWidth, newHeight, position);
                   }}
                   bounds="parent"
                 >
                   <IoMdCloseCircle
                     className="text-xl cursor-pointer absolute -top-7 -right-2 bg-white rounded-full"
-                    onClick={() => setShowSignature(false)}
+                    onClick={clearCurrentFileRnd}
                   />
                   <img
                     draggable={false}
@@ -140,7 +209,7 @@ function App() {
                 </Rnd>
               )}
             </div>
-            <Button variant={"outline"} onClick={handleDownload}>
+            <Button variant={"outline"} onClick={onUniqueFileDownload}>
               Download File
             </Button>
           </div>
@@ -151,11 +220,11 @@ function App() {
       {files.length > 0 && (
         <SelectedFiles
           files={files}
-          setCurrentFile={setCurrentFile}
+          setCurrentIndexFile={setCurrentIndexFile}
           setFiles={setFiles}
-          setShowSignature={setShowSignature}
         />
       )}
+
       {/* Hidden Canvas for generating the image with signature */}
       <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
