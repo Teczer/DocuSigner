@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import { Button } from "./ui/button";
 import { IoMdAdd } from "react-icons/io";
 import { FileWithRnd } from "../App";
+import { FaRegTrashAlt } from "react-icons/fa";
 
 interface SelectedFilesProps {
   files: FileWithRnd[];
@@ -28,9 +29,9 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
           <li
             key={index}
             onClick={() => setCurrentIndexFile(index)}
-            className="w-full shadow-xl cursor-pointer px-8 py-2 rounded-md transition-all hover:scale-105"
+            className="flex relative w-full"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex w-full items-center gap-4 shadow-xl cursor-pointer px-8 py-2 rounded-md transition-all hover:scale-105">
               {file.file.type.startsWith("image/") && (
                 <img
                   src={URL.createObjectURL(file.file)}
@@ -39,12 +40,19 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
                 />
               )}
               <div>
-                <p className="font-bold">{file.file.name}</p>
+                <p className="max-w-56 font-bold truncate">{file.file.name}</p>
                 <p className="text-gray-500">
                   {(file.file.size / 1024).toFixed(2)} KB
                 </p>
               </div>
             </div>
+            <FaRegTrashAlt
+              className="text-2xl absolute -right-10 top-10 cursor-pointer hover:text-red-900 transition-all hover:scale-125"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFiles(files.filter((_, i) => i !== index));
+              }}
+            />
           </li>
         ))}
         <li
