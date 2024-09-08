@@ -6,6 +6,7 @@ import { Rnd } from "react-rnd";
 import { IoMdCloseCircle } from "react-icons/io";
 import { DropFilesZone } from "./components/DropFilesZone";
 import { SelectedFiles } from "./components/SelectedFiles";
+import { downloadFileWithSignature } from "./lib/downloadFile";
 
 function App() {
   const savedSignature = localStorage.getItem("signature");
@@ -17,7 +18,7 @@ function App() {
   );
   const [showSignature, setShowSignature] = useState<boolean>(false);
 
-  const [rnd, setRnd] = useState({
+  const [rnd, setRnd] = useState<rndStates>({
     width: "250px",
     height: "150px",
     x: 0,
@@ -27,6 +28,7 @@ function App() {
   const signatureCanvasRef = useRef<ReactSignatureCanvas | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const embedRef = useRef<HTMLEmbedElement | null>(null);
 
   const clearSignature = () => {
     signatureCanvasRef.current?.clear();
@@ -42,58 +44,17 @@ function App() {
     }
   };
 
-  const downloadFileWithSignature = async () => {
-    if (!currentFile || !canvasRef.current || !imageRef.current) return;
+  const handleDownload = () => {
+    if (!currentFile) return;
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    if (!ctx) return;
-
-    // Load the image
-    const img = new Image();
-    img.src = URL.createObjectURL(currentFile);
-
-    img.onload = () => {
-      // Set canvas dimensions to match the image
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      // Draw the image on the canvas
-      ctx.drawImage(img, 0, 0);
-
-      // Draw the signature if it exists
-      if (signatureData) {
-        const signatureImg = new Image();
-        signatureImg.src = signatureData;
-        signatureImg.onload = () => {
-          // Calculate the position of the signature relative to the image
-          const rect = imageRef.current!.getBoundingClientRect();
-          const scaleX = img.width / rect.width;
-          const scaleY = img.height / rect.height;
-
-          const signatureX = rnd.x * scaleX;
-          const signatureY = rnd.y * scaleY;
-          const signatureWidth = parseInt(rnd.width) * scaleX;
-          const signatureHeight = parseInt(rnd.height) * scaleY;
-
-          // Draw the signature on the canvas
-          ctx.drawImage(
-            signatureImg,
-            signatureX,
-            signatureY,
-            signatureWidth,
-            signatureHeight
-          );
-
-          // Convert canvas to data URL and trigger download
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = `signed_${currentFile.name}`;
-          link.click();
-        };
-      }
-    };
+    downloadFileWithSignature(
+      currentFile,
+      signatureData,
+      rnd,
+      embedRef,
+      canvasRef,
+      imageRef
+    );
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -123,14 +84,15 @@ function App() {
 
       {/* FICHIER ACTUEL */}
       {currentFile && (
-        <div className="flex flex-col items-center justify-center gap-4 w-6/12 border">
+        <div className="flex flex-col items-center justify-center gap-4 w-6/12">
           <div className="flex flex-col items-center justify-center gap-4">
             <div className="relative">
               {currentFile.type === "application/pdf" ? (
                 <embed
+                  width={600}
+                  height={600}
+                  ref={embedRef}
                   src={URL.createObjectURL(currentFile)}
-                  width="500"
-                  height="375"
                   type="application/pdf"
                 />
               ) : (
@@ -165,7 +127,7 @@ function App() {
                   bounds="parent"
                 >
                   <IoMdCloseCircle
-                    className="text-2xl cursor-pointer absolute -top-7 -right-2"
+                    className="text-xl cursor-pointer absolute -top-7 -right-2 bg-white rounded-full"
                     onClick={() => setShowSignature(false)}
                   />
                   <img
@@ -178,8 +140,8 @@ function App() {
                 </Rnd>
               )}
             </div>
-            <Button variant={"outline"} onClick={downloadFileWithSignature}>
-              Download File with Signature
+            <Button variant={"outline"} onClick={handleDownload}>
+              Download File
             </Button>
           </div>
         </div>

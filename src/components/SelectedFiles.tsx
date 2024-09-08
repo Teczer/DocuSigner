@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Button } from "./ui/button";
+import { IoMdAdd } from "react-icons/io";
 
 interface SelectedFilesProps {
   files: File[];
@@ -14,15 +15,21 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
   setFiles,
   setShowSignature,
 }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddFile = () => {
+    if (inputRef.current) {
+      inputRef.current.click();
+    }
+  };
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-4/12">
-      <h3>Selected files</h3>
-      <ul className="flex flex-col gap-4">
+      <ul className="flex items-center flex-col gap-4 mb-10">
         {files.map((file, index) => (
           <li
             key={index}
             onClick={() => setCurrentFile(file)}
-            className="shadow-xl cursor-pointer px-8 py-2 rounded-md transition-all hover:scale-105"
+            className="w-full shadow-xl cursor-pointer px-8 py-2 rounded-md transition-all hover:scale-105"
           >
             <div className="flex items-center gap-4">
               {file.type.startsWith("image/") && (
@@ -41,6 +48,25 @@ export const SelectedFiles: React.FC<SelectedFilesProps> = ({
             </div>
           </li>
         ))}
+        <li className="border shadow-2xl cursor-pointer px-4 py-2 rounded-md transition-all hover:scale-105">
+          <IoMdAdd onClick={handleAddFile} />
+          <input
+            ref={inputRef}
+            type="file"
+            onChange={(e) => {
+              if (!e.target.files) return;
+
+              const newFiles = Array.from(e.target.files);
+              if (newFiles.length > 0) {
+                setFiles([...files, ...newFiles]);
+                setCurrentFile(newFiles[0]);
+              }
+            }}
+            multiple
+            hidden
+            accept="image/jpeg, image/png, application/pdf"
+          />
+        </li>
       </ul>
       <Button
         variant={"destructive"}
